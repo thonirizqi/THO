@@ -1,0 +1,8 @@
+{
+  "name": "tho-creative-ops",
+  "displayName": "THO Creative Ops",
+  "version": "1.0.0",
+  "description": "Marketing, sponsorship, competitive research, and web dashboard toolkit for music, event, and brand-partnership work. 17 skills (curated from ECC plus a custom dashboard builder) and 3 agents. No paid APIs required.",
+  "author": { "name": "Thoni Rizqi" },
+  "license": "MIT"
+}

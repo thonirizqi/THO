@@ -1,0 +1,16 @@
+{
+  "name": "tho",
+  "owner": {
+    "name": "Thoni Rizqi"
+  },
+  "metadata": {
+    "description": "Thoni Rizqi's Claude plugins for music, event, and brand-partnership work."
+  },
+  "plugins": [
+    {
+      "name": "tho-creative-ops",
+      "source": "./plugins/tho-creative-ops",
+      "description": "Marketing, sponsorship, competitive research, and web dashboard toolkit (17 skills, 3 agents, no paid APIs)."
+    }
+  ]
+}
