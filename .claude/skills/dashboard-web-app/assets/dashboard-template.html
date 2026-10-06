@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sponsorship Dashboard</title>
+<style>
+  :root {
+    --bg: #f6f6f3; --surface: #ffffff; --surface-2: #f0efea; --text: #1d1d1b; --muted: #6b6a64;
+    --border: #e3e1da; --accent: #2f5bd3; --good: #1f8a5b; --warn: #b7791f; --bad: #c2413b;
+    --s1: #2f5bd3; --s2: #e07a3f; --s3: #1f8a5b; --s4: #8a4fd0; --s5: #c2413b; --s6: #2a9fb5; --s7: #b7791f; --s8: #6b6a64;
+    --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --surface: #1e1e1c; --surface-2: #262624; --text: #ecebe6; --muted: #a09f98;
+      --border: #34332f; --accent: #7b9bff; --good: #4cc38a; --warn: #e3b341; --bad: #f07167;
+      --s1: #7b9bff; --s2: #f4a261; --s3: #4cc38a; --s4: #b58cff; --s5: #f07167; --s6: #5cc8de; --s7: #e3b341; --s8: #a09f98;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141413; --surface: #1e1e1c; --surface-2: #262624; --text: #ecebe6; --muted: #a09f98;
+    --border: #34332f; --accent: #7b9bff; --good: #4cc38a; --warn: #e3b341; --bad: #f07167;
+    --s1: #7b9bff; --s2: #f4a261; --s3: #4cc38a; --s4: #b58cff; --s5: #f07167; --s6: #5cc8de; --s7: #e3b341; --s8: #a09f98;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  select, input[type=search], button, .btn {
+    font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px; min-height: 36px; }
+  button, .btn { cursor: pointer; }
+  button:hover, .btn:hover { background: var(--surface-2); }
+  .btn input { display: none; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; min-width: 0; }
+  .kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .kpi .value { font-size: 26px; font-weight: 650; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+  .chart-box { position: relative; height: 260px; }
+  .table-card { overflow: hidden; }
+  .table-head { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; cursor: pointer; user-select: none; }
+  th.num, td.num { text-align: right; }
+  tbody tr:hover { background: var(--surface-2); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--surface-2); }
+  .empty { color: var(--muted); padding: 24px; text-align: center; }
+  @media (max-width: 420px) { .charts { grid-template-columns: 1fr; } .kpi .value { font-size: 22px; } }
+  @media print { .toolbar, .table-head input, .table-head button { display: none !important; } body { background: #fff; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="title"></h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <div class="toolbar" id="filters"></div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+  <section class="charts" id="charts"></section>
+
+  <section class="card table-card">
+    <div class="table-head">
+      <h2 style="margin:0">Detail data</h2>
+      <div class="toolbar">
+        <input type="search" id="search" placeholder="Cari…" aria-label="Cari di tabel">
+        <label class="btn">Impor CSV<input type="file" id="importCsv" accept=".csv,text/csv"></label>
+        <button id="exportCsv" type="button">Ekspor CSV</button>
+        <button id="themeToggle" type="button">Tema</button>
+      </div>
+    </div>
+    <div class="table-scroll"><table id="table"></table></div>
+  </section>
+</div>
+
+<!-- ==== CONFIG: ubah bagian ini untuk dashboard lain ==== -->
+<script id="config" type="application/json">
+{
+  "title": "Sponsorship Pipeline",
+  "subtitle": "Status outreach sponsor",
+  "currency": "IDR",
+  "dateField": "follow_up",
+  "filters": ["kategori", "status"],
+  "kpis": [
+    { "label": "Total brand", "agg": "count" },
+    { "label": "Nilai pipeline", "field": "nilai", "agg": "sum", "format": "currency" },
+    { "label": "Deal closed", "field": "nilai", "agg": "sum", "format": "currency", "where": { "status": "Closed" } },
+    { "label": "Win rate", "agg": "ratio", "where": { "status": "Closed" }, "format": "percent" }
+  ],
+  "charts": [
+    { "type": "bar", "title": "Nilai per status", "groupBy": "status", "field": "nilai", "agg": "sum", "format": "currency",
+      "order": ["Prospek", "Dihubungi", "Negosiasi", "Closed", "Ditolak"] },
+    { "type": "doughnut", "title": "Brand per kategori", "groupBy": "kategori", "agg": "count" },
+    { "type": "line", "title": "Follow-up per bulan", "groupBy": "month:follow_up", "agg": "count" }
+  ],
+  "table": [
+    { "field": "brand", "label": "Brand" },
+    { "field": "kategori", "label": "Kategori" },
+    { "field": "status", "label": "Status", "pill": true },
+    { "field": "nilai", "label": "Nilai", "format": "currency" },
+    { "field": "follow_up", "label": "Follow-up", "format": "date" },
+    { "field": "pic", "label": "PIC" }
+  ]
+}
+</script>
+
+<!-- ==== DATA: ganti dengan data asli (array of objects) ==== -->
+<script id="data" type="application/json">
+[
+  { "brand": "Brand A", "kategori": "Beverage", "status": "Negosiasi", "nilai": 150000000, "follow_up": "2026-10-12", "pic": "Thoni" },
+  { "brand": "Brand B", "kategori": "Bank", "status": "Dihubungi", "nilai": 250000000, "follow_up": "2026-10-20", "pic": "Thoni" },
+  { "brand": "Brand C", "kategori": "Telco", "status": "Prospek", "nilai": 300000000, "follow_up": "2026-11-03", "pic": "Sindy" },
+  { "brand": "Brand D", "kategori": "F&B", "status": "Closed", "nilai": 75000000, "follow_up": "2026-09-28", "pic": "Sindy" },
+  { "brand": "Brand E", "kategori": "Lifestyle", "status": "Ditolak", "nilai": 50000000, "follow_up": "2026-09-15", "pic": "Thoni" },
+  { "brand": "Brand F", "kategori": "Beverage", "status": "Closed", "nilai": 120000000, "follow_up": "2026-10-01", "pic": "Thoni" },
+  { "brand": "Brand G", "kategori": "Fintech", "status": "Negosiasi", "nilai": 200000000, "follow_up": "2026-11-10", "pic": "Sindy" },
+  { "brand": "Brand H", "kategori": "Bank", "status": "Prospek", "nilai": 350000000, "follow_up": "2026-11-18", "pic": "Thoni" }
+]
+</script>
+
+<script>
+// Chart.js dimuat dari cdnjs; kalau gagal, coba jsDelivr. Dashboard tetap jalan tanpa grafik bila keduanya gagal.
+const CHART_SRC = [
+  'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js'
+];
+function loadChart(i, done) {
+  if (i >= CHART_SRC.length) return done();
+  const el = document.createElement('script');
+  el.src = CHART_SRC[i];
+  el.onload = done;
+  el.onerror = () => { el.remove(); loadChart(i + 1, done); };
+  document.head.appendChild(el);
+}
+loadChart(0, () => {
+  let CONFIG = JSON.parse(document.getElementById('config').textContent);
+  let DATA = JSON.parse(document.getElementById('data').textContent);
+  const LOCALE = 'id-ID';
+  const state = { filters: {}, search: '', sort: null, sortDir: 1 };
+  const charts = [];
+
+  // ---------- formatting ----------
+  const fmt = {
+    number: v => new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 }).format(v),
+    currency: v => {
+      const abs = Math.abs(v);
+      if (abs >= 1e12) return 'Rp' + fmt.number(v / 1e12) + ' T';
+      if (abs >= 1e9) return 'Rp' + fmt.number(v / 1e9) + ' M';
+      if (abs >= 1e6) return 'Rp' + fmt.number(v / 1e6) + ' jt';
+      return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: CONFIG.currency || 'IDR', maximumFractionDigits: 0 }).format(v);
+    },
+    currencyFull: v => new Intl.NumberFormat(LOCALE, { style: 'currency', currency: CONFIG.currency || 'IDR', maximumFractionDigits: 0 }).format(v),
+    percent: v => new Intl.NumberFormat(LOCALE, { style: 'percent', maximumFractionDigits: 1 }).format(v),
+    date: v => { const d = new Date(v); return isNaN(d) ? (v ?? '') : d.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' }); },
+  };
+  const format = (v, f) => (v == null || v === '') ? '–' : (fmt[f] ? fmt[f](v) : String(v));
+
+  // ---------- data helpers ----------
+  const matches = (row, where) => !where || Object.entries(where).every(([k, v]) =>
+    Array.isArray(v) ? v.includes(row[k]) : row[k] === v);
+  const keyOf = (row, groupBy) => {
+    if (groupBy.startsWith('month:')) {
+      const d = new Date(row[groupBy.slice(6)]);
+      return isNaN(d) ? '(tanpa tanggal)' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+    return row[groupBy] ?? '(kosong)';
+  };
+  const aggregate = (rows, agg, field, where) => {
+    const sel = rows.filter(r => matches(r, where));
+    if (agg === 'count') return sel.length;
+    if (agg === 'ratio') return rows.length ? sel.length / rows.length : 0;
+    const vals = sel.map(r => Number(r[field])).filter(Number.isFinite);
+    if (agg === 'sum') return vals.reduce((a, b) => a + b, 0);
+    if (agg === 'avg') return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+    if (agg === 'max') return vals.length ? Math.max(...vals) : 0;
+    if (agg === 'min') return vals.length ? Math.min(...vals) : 0;
+    return 0;
+  };
+  const filtered = () => {
+    const q = state.search.trim().toLowerCase();
+    return DATA.filter(r =>
+      Object.entries(state.filters).every(([k, v]) => !v || String(r[k]) === v) &&
+      (!q || Object.values(r).some(v => String(v).toLowerCase().includes(q))));
+  };
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const palette = () => ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'].map(cssVar);
+
+  // ---------- render ----------
+  function renderFilters() {
+    const box = document.getElementById('filters');
+    box.innerHTML = '';
+    (CONFIG.filters || []).forEach(field => {
+      const sel = document.createElement('select');
+      sel.setAttribute('aria-label', 'Filter ' + field);
+      const values = [...new Set(DATA.map(r => r[field]).filter(v => v != null && v !== ''))].sort();
+      sel.innerHTML = `<option value="">Semua ${field}</option>` +
+        values.map(v => `<option${state.filters[field] === String(v) ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('');
+      sel.onchange = () => { state.filters[field] = sel.value; renderAll(false); };
+      box.appendChild(sel);
+    });
+  }
+
+  function renderKpis(rows) {
+    document.getElementById('kpis').innerHTML = (CONFIG.kpis || []).map(k => `
+      <div class="card kpi"><div class="label">${escapeHtml(k.label)}</div>
+      <div class="value" title="${escapeHtml(format(aggregate(rows, k.agg, k.field, k.where), k.format === 'currency' ? 'currencyFull' : k.format))}">
+        ${escapeHtml(format(aggregate(rows, k.agg, k.field, k.where), k.format || 'number'))}</div></div>`).join('');
+  }
+
+  function renderCharts(rows) {
+    const box = document.getElementById('charts');
+    charts.forEach(c => c.destroy()); charts.length = 0;
+    box.innerHTML = (CONFIG.charts || []).map((c, i) =>
+      `<div class="card"><h2>${escapeHtml(c.title)}</h2><div class="chart-box"><canvas id="chart${i}" role="img" aria-label="${escapeHtml(c.title)}"></canvas></div></div>`).join('');
+    if (typeof Chart === 'undefined') {
+      box.querySelectorAll('.chart-box').forEach(el => el.innerHTML = '<div class="empty">Grafik tidak dapat dimuat (library offline).</div>');
+      return;
+    }
+    const colors = palette(), text = cssVar('--muted'), grid = cssVar('--border');
+    (CONFIG.charts || []).forEach((c, i) => {
+      const groups = new Map();
+      rows.forEach(r => { const k = keyOf(r, c.groupBy); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+      let labels = [...groups.keys()];
+      if (c.order) labels = c.order.filter(l => groups.has(l)).concat(labels.filter(l => !c.order.includes(l)));
+      else if (c.groupBy.startsWith('month:')) labels.sort();
+      const values = labels.map(l => aggregate(groups.get(l), c.agg, c.field, c.where));
+      const radial = c.type === 'doughnut' || c.type === 'pie';
+      charts.push(new Chart(document.getElementById('chart' + i), {
+        type: c.type,
+        data: { labels, datasets: [{ label: c.title, data: values,
+          backgroundColor: radial ? labels.map((_, j) => colors[j % colors.length]) : colors[0],
+          borderColor: radial ? cssVar('--surface') : colors[0], borderWidth: radial ? 2 : 2,
+          tension: .3, fill: false, borderRadius: c.type === 'bar' ? 6 : 0, pointRadius: 3 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+          plugins: {
+            legend: { display: radial, position: 'bottom', labels: { color: text, boxWidth: 10 } },
+            tooltip: { callbacks: { label: ctx => ' ' + format(ctx.parsed.y ?? ctx.parsed, c.format === 'currency' ? 'currencyFull' : (c.format || 'number')) } }
+          },
+          scales: radial ? {} : {
+            x: { ticks: { color: text }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: text, precision: c.agg === 'count' ? 0 : undefined, callback: v => format(v, c.format || 'number') }, grid: { color: grid } }
+          }
+        }
+      }));
+    });
+  }
+
+  function renderTable(rows) {
+    const cols = CONFIG.table || Object.keys(DATA[0] || {}).map(f => ({ field: f, label: f }));
+    if (state.sort) {
+      const col = cols.find(c => c.field === state.sort);
+      rows = [...rows].sort((a, b) => {
+        let x = a[state.sort], y = b[state.sort];
+        if (col && (col.format === 'currency' || col.format === 'number')) { x = Number(x); y = Number(y); }
+        return (x > y ? 1 : x < y ? -1 : 0) * state.sortDir;
+      });
+    }
+    const isNum = c => c.format === 'currency' || c.format === 'number' || c.format === 'percent';
+    const arrow = f => state.sort === f ? (state.sortDir > 0 ? ' ▲' : ' ▼') : '';
+    document.getElementById('table').innerHTML =
+      `<thead><tr>${cols.map(c => `<th class="${isNum(c) ? 'num' : ''}" data-f="${escapeHtml(c.field)}">${escapeHtml(c.label)}${arrow(c.field)}</th>`).join('')}</tr></thead>` +
+      (rows.length ? `<tbody>${rows.map(r => `<tr>${cols.map(c => {
+        const v = format(r[c.field], c.format === 'currency' ? 'currencyFull' : c.format);
+        return `<td class="${isNum(c) ? 'num' : ''}">${c.pill ? `<span class="pill">${escapeHtml(v)}</span>` : escapeHtml(v)}</td>`;
+      }).join('')}</tr>`).join('')}</tbody>`
+      : `<tbody><tr><td class="empty" colspan="${cols.length}">Tidak ada data yang cocok.</td></tr></tbody>`);
+    document.querySelectorAll('#table th').forEach(th => th.onclick = () => {
+      const f = th.dataset.f; state.sortDir = state.sort === f ? -state.sortDir : 1; state.sort = f; renderTable(filtered());
+    });
+  }
+
+  function renderAll(withFilters = true) {
+    document.getElementById('title').textContent = CONFIG.title || 'Dashboard';
+    document.title = CONFIG.title || 'Dashboard';
+    document.getElementById('subtitle').textContent =
+      `${CONFIG.subtitle ? CONFIG.subtitle + ' · ' : ''}${DATA.length} baris data`;
+    if (withFilters) renderFilters();
+    const rows = filtered();
+    renderKpis(rows); renderCharts(rows); renderTable(rows);
+  }
+
+  // ---------- CSV ----------
+  function parseCsv(text) {
+    const rows = []; let row = [], cell = '', q = false;
+    const sep = (text.split('\n')[0].match(/;/g) || []).length > (text.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === sep) { row.push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += ch;
+    }
+    if (cell || row.length) { row.push(cell); rows.push(row); }
+    const [head, ...body] = rows.filter(r => r.some(c => c.trim() !== ''));
+    return body.map(r => Object.fromEntries(head.map((h, i) => [h.trim(), parseValue((r[i] ?? '').trim())])));
+  }
+  // "Rp 1.200.000", "1.200", "12,5", "1,234.56" -> number; everything else stays text.
+  function parseValue(raw) {
+    if (raw === '' || !/^-?\s*(Rp\.?)?\s*[\d.,]+\s*%?$/i.test(raw)) return raw;
+    let t = raw.replace(/Rp\.?|\s|%/gi, '');
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t) || /^-?\d+,\d+$/.test(t)) t = t.replace(/\./g, '').replace(',', '.');
+    else t = t.replace(/,/g, '');
+    const n = Number(t);
+    return Number.isFinite(n) ? (raw.includes('%') ? n / 100 : n) : raw;
+  }
+  // Build a sensible config when imported data does not match the current one.
+  function autoConfig(rows, base) {
+    const fields = Object.keys(rows[0] || {});
+    const isNum = f => rows.every(r => r[f] === '' || typeof r[f] === 'number');
+    const isDate = f => !isNum(f) && rows.filter(r => r[f] !== '').every(r => /^\d{4}-\d{2}-\d{2}/.test(r[f]));
+    const nums = fields.filter(isNum);
+    const dates = fields.filter(isDate);
+    const cats = fields.filter(f => !nums.includes(f) && !dates.includes(f))
+      .filter(f => { const u = new Set(rows.map(r => r[f])).size; return u > 1 && u <= Math.max(12, rows.length / 3); });
+    const charts = [];
+    if (cats[0]) charts.push(nums[0] ? { type: 'bar', title: `${nums[0]} per ${cats[0]}`, groupBy: cats[0], field: nums[0], agg: 'sum' }
+                                     : { type: 'bar', title: `Jumlah per ${cats[0]}`, groupBy: cats[0], agg: 'count' });
+    if (cats[1] || cats[0]) charts.push({ type: 'doughnut', title: `Komposisi ${cats[1] || cats[0]}`, groupBy: cats[1] || cats[0], agg: 'count' });
+    if (dates[0]) charts.push(nums[0] ? { type: 'line', title: `${nums[0]} per bulan`, groupBy: 'month:' + dates[0], field: nums[0], agg: 'sum' }
+                                      : { type: 'line', title: 'Jumlah per bulan', groupBy: 'month:' + dates[0], agg: 'count' });
+    return {
+      title: base.title, subtitle: 'Data impor', currency: base.currency,
+      filters: cats.slice(0, 3),
+      kpis: [{ label: 'Jumlah baris', agg: 'count' }].concat(nums.slice(0, 3).map(f => ({ label: 'Total ' + f, field: f, agg: 'sum' }))),
+      charts,
+      table: fields.map(f => ({ field: f, label: f, format: nums.includes(f) ? 'number' : dates.includes(f) ? 'date' : undefined }))
+    };
+  }
+  function toCsv(rows) {
+    const cols = Object.keys(rows[0] || {});
+    const esc = v => /[",\n;]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? '');
+    return [cols.join(','), ...rows.map(r => cols.map(c => esc(r[c])).join(','))].join('\n');
+  }
+  document.getElementById('importCsv').onchange = async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try { const rows = parseCsv(await file.text()); if (rows.length) {
+        const cols = Object.keys(rows[0]);
+        const fits = (CONFIG.table || []).every(c => cols.includes(c.field));
+        if (!fits) CONFIG = autoConfig(rows, CONFIG);
+        DATA = rows; state.filters = {}; state.sort = null; renderAll();
+      } }
+    catch (err) { alert('CSV tidak dapat dibaca: ' + err.message); }
+    e.target.value = '';
+  };
+  document.getElementById('exportCsv').onclick = () => {
+    const blob = new Blob(['﻿' + toCsv(filtered())], { type: 'text/csv;charset=utf-8' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: (CONFIG.title || 'dashboard') + '.csv' });
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+
+  // ---------- misc ----------
+  document.getElementById('search').oninput = e => { state.search = e.target.value; const r = filtered(); renderKpis(r); renderCharts(r); renderTable(r); };
+  document.getElementById('themeToggle').onclick = () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    renderCharts(filtered());
+  };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => renderCharts(filtered()));
+  function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  renderAll();
+});
+</script>
+</body>
+</html>
